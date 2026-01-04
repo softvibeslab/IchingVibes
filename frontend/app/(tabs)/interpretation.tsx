@@ -904,4 +904,106 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  // Estilos para Recursos Externos
+  recursosContainer: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 215, 0, 0.3)',
+    width: '100%',
+  },
+  recursosTitle: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  recursosLinks: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  recursoLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.4)',
+  },
+  recursoText: {
+    color: '#FFD700',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  // Estilos para Timing en Plan de Acción
+  timingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginTop: 10,
+  },
+  timingText: {
+    color: '#0f0e17',
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginLeft: 4,
+    textTransform: 'capitalize',
+  },
+  // Estilos para Metadatos
+  metadatosSection: {
+    backgroundColor: '#1a1a2e',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 20,
+  },
+  metadatosGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  metadatoItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  metadatoIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  tonoIcon: {
+    backgroundColor: '#8B5CF6',
+  },
+  elementoIcon: {
+    backgroundColor: '#10B981',
+  },
+  virtudIcon: {
+    backgroundColor: '#F59E0B',
+  },
+  metadatoLabel: {
+    fontSize: 11,
+    color: '#999',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  metadatoValue: {
+    fontSize: 13,
+    color: '#FFD700',
+    fontWeight: '600',
+    textAlign: 'center',
+    textTransform: 'capitalize',
+  },
 });
