@@ -80,7 +80,8 @@ npx expo start
 
 ## 📖 Documentación
 
-- [📦 Guía de Deployment](./DEPLOYMENT.md)
+- [📦 Guía General de Deployment](./DEPLOYMENT.md)
+- [🌐 **Deployment en Hostinger + Easypanel**](./docs/DEPLOYMENT_HOSTINGER_EASYPANEL.md) ⭐ Recomendado
 - [🔌 Documentación de API](./docs/API.md)
 - [⚙️ Variables de Entorno](./docs/ENV_VARIABLES.md)
 - [👥 Usuarios Demo](./USUARIOS_DEMO.md)
