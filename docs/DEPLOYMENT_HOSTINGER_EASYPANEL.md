@@ -238,9 +238,58 @@ iching-oracle/
 
 ### 7.1 Añadir servicio MongoDB
 
+#### 🖱️ Opción A: Desde la UI de Easypanel
+
 1. Dentro del proyecto `iching-oracle`, click en **"+ Service"**
 2. Seleccionar **"Database"**
 3. Seleccionar **"MongoDB"**
+
+#### 💻 Opción B: Desde Terminal SSH
+
+Conecta al VPS por SSH y ejecuta:
+
+```bash
+# Crear directorio para el proyecto
+mkdir -p /etc/easypanel/projects/iching-oracle
+
+# Crear archivo de configuración del proyecto
+cat > /etc/easypanel/projects/iching-oracle/docker-compose.yml << 'EOF'
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: iching-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: iching_user
+      MONGO_INITDB_ROOT_PASSWORD: TuPasswordSeguro123!
+      MONGO_INITDB_DATABASE: iching_production
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - iching-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mongodb_data:
+
+networks:
+  iching-network:
+    driver: bridge
+EOF
+
+# Iniciar MongoDB
+cd /etc/easypanel/projects/iching-oracle
+docker-compose up -d mongodb
+
+# Verificar que está corriendo
+docker ps | grep mongodb
+```
 
 ### 7.2 Configurar MongoDB
 
@@ -274,6 +323,51 @@ mongodb://iching_user:TU_PASSWORD@mongodb:27017/iching_production
 ```
 
 ⚠️ **Guarda este string**, lo necesitarás para el backend.
+
+### ✅ 7.6 VALIDACIÓN: Verificar MongoDB
+
+#### Desde Terminal SSH:
+
+```bash
+# 1. Verificar que el contenedor está corriendo
+echo "1️⃣ Estado del contenedor:"
+docker ps | grep mongo
+# ✅ Debe mostrar: iching-mongodb ... Up X minutes
+
+# 2. Verificar logs (sin errores)
+echo "2️⃣ Últimos logs:"
+docker logs --tail 20 iching-mongodb
+# ✅ Debe mostrar: "Waiting for connections" sin errores
+
+# 3. Probar conexión
+echo "3️⃣ Probando conexión:"
+docker exec iching-mongodb mongosh --eval "db.adminCommand('ping')"
+# ✅ Debe mostrar: { ok: 1 }
+
+# 4. Verificar base de datos
+echo "4️⃣ Verificando base de datos:"
+docker exec iching-mongodb mongosh -u iching_user -p TuPasswordSeguro123! --authenticationDatabase admin --eval "show dbs"
+# ✅ Debe mostrar lista de bases de datos
+```
+
+#### Desde Easypanel UI:
+
+1. Ir al servicio MongoDB
+2. Click en pestaña **"Logs"**
+3. Verificar que muestra: `Waiting for connections on port 27017`
+4. Click en pestaña **"Terminal"**
+5. Ejecutar: `mongosh --eval "db.adminCommand('ping')"`
+
+#### Checklist de validación:
+
+| Verificación | Comando | ✅ Esperado |
+|--------------|---------|-------------|
+| Contenedor activo | `docker ps \| grep mongo` | Status: Up |
+| Sin errores | `docker logs iching-mongodb` | Sin errores rojos |
+| Ping responde | `mongosh --eval "db.adminCommand('ping')"` | `{ ok: 1 }` |
+| Puerto abierto | `docker port iching-mongodb` | `27017/tcp` |
+
+**⚠️ NO continúes al siguiente paso hasta que todas las validaciones pasen.**
 
 ---
 
