@@ -34,35 +34,47 @@ export default function OracleScreen() {
   const [result, setResult] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState(false);
+  const [shakeIndicator, setShakeIndicator] = useState(false);
 
   useEffect(() => {
     requestPermissions();
     return () => {
       sensorManager.stop();
+      sensorManager.removeShakeCallback();
     };
   }, []);
 
+  // Actualizar el callback de shake cuando cambian las dependencias
+  useEffect(() => {
+    if (permissionGranted) {
+      sensorManager.onShake(() => {
+        if (!isAnimating && currentThrow < 6) {
+          // Mostrar indicador visual
+          setShakeIndicator(true);
+          setTimeout(() => setShakeIndicator(false), 500);
+          handleThrowCoins();
+        }
+      });
+    }
+  }, [permissionGranted, isAnimating, currentThrow]);
+
   const requestPermissions = async () => {
     try {
+      // En web, los sensores pueden no estar disponibles
       const { status } = await Accelerometer.requestPermissionsAsync();
       if (status === 'granted') {
         setPermissionGranted(true);
         await sensorManager.start();
-        
-        // Configurar detector de sacudida
-        sensorManager.onShake(() => {
-          if (!isAnimating && currentThrow < 6) {
-            handleThrowCoins();
-          }
-        });
+        console.log('✅ Sensor permissions granted');
       } else {
-        Alert.alert(
-          'Permisos Requeridos',
-          'Esta app necesita acceso al acelerómetro para detectar sacudidas del dispositivo.'
-        );
+        // En web, permitir uso sin sensores (solo botón)
+        console.log('⚠️ Sensor permissions not granted, button-only mode');
+        setPermissionGranted(true); // Permitir uso sin sensores
       }
     } catch (error) {
       console.error('Error requesting permissions:', error);
+      // En caso de error, permitir uso sin sensores
+      setPermissionGranted(true);
     }
   };
 
@@ -70,16 +82,24 @@ export default function OracleScreen() {
     if (isAnimating) return;
 
     setIsAnimating(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    
+    // Feedback háptico inmediato
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    } catch (e) {
+      console.log('Haptics not available');
+    }
 
-    // Obtener entropía del sensor
-    const entropy = sensorManager.getEntropy();
+    // Obtener entropía del sensor (o usar random si no hay sensores)
+    const entropy = sensorManager.isActive() 
+      ? sensorManager.getEntropy() 
+      : Math.random();
     
     // Lanzar monedas
     const coins = throwCoins(entropy);
     setCoinValues(coins);
 
-    // Procesar tirada después de la animación
+    // Procesar tirada después de la animación (1.2 segundos)
     setTimeout(() => {
       const throw_result = processThrow(coins);
       const newThrows = [...throws, throw_result];
@@ -87,8 +107,12 @@ export default function OracleScreen() {
       setCurrentThrow(currentThrow + 1);
       setIsAnimating(false);
 
-      // Feedback háptico
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Feedback háptico de éxito
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch (e) {
+        console.log('Haptics not available');
+      }
 
       // Si completamos las 6 tiradas
       if (newThrows.length === 6) {
