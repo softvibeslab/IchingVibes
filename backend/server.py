@@ -53,6 +53,25 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# === HEALTH CHECK ===
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint for deployment verification"""
+    try:
+        # Test MongoDB connection
+        await db.command('ping')
+        db_status = "healthy"
+    except Exception as e:
+        db_status = f"unhealthy: {str(e)}"
+    
+    return {
+        "status": "healthy",
+        "service": "I Ching Oracle API",
+        "database": db_status,
+        "version": "1.0.0"
+    }
+
+
 # === UTILITY FUNCTIONS ===
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
