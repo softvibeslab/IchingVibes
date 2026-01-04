@@ -205,75 +205,65 @@ export default function InterpretationScreen() {
           {/* Interpretación Profunda */}
           {deepInterpretation && !loadingInterpretation && (
             <View style={styles.deepInterpretation}>
-              {/* Título Impactante */}
-              <View style={styles.titleCard}>
-                <Text style={styles.deepTitle}>{deepInterpretation.titulo}</Text>
-                <View style={styles.keywords}>
-                  {deepInterpretation.keywords.map((keyword, index) => (
-                    <View key={index} style={styles.keywordBadge}>
-                      <Text style={styles.keywordText}>{keyword}</Text>
-                    </View>
-                  ))}
-                </View>
+              {/* Situación Presente */}
+              <View style={styles.presentCard}>
+                <Text style={styles.emojiLarge}>{deepInterpretation.presente.icono}</Text>
+                <Text style={styles.presentTitle}>{deepInterpretation.presente.nombre}</Text>
+                <Text style={styles.presentNumber}>Hexagrama #{deepInterpretation.presente.numero}</Text>
+                <Text style={styles.presentMessage}>{deepInterpretation.presente.mensaje_principal}</Text>
               </View>
 
-              {/* Análisis */}
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name="eye" size={20} color="#FFD700" />
-                  <Text style={styles.sectionTitle}>Análisis de la Situación</Text>
-                </View>
-                <Text style={styles.analysisText}>{deepInterpretation.analisis}</Text>
-              </View>
-
-              {/* Líneas Móviles */}
-              {deepInterpretation.lineas_moviles && (
-                <View style={styles.section}>
+              {/* Transformación */}
+              {deepInterpretation.transformacion.lineas_mutantes.length > 0 && (
+                <View style={styles.transformationSection}>
                   <View style={styles.sectionHeader}>
-                    <Ionicons name="git-network" size={20} color="#FFD700" />
-                    <Text style={styles.sectionTitle}>Líneas en Transformación</Text>
+                    <Ionicons name="git-network" size={24} color="#FFD700" />
+                    <Text style={styles.sectionTitle}>Transformación en Proceso</Text>
                   </View>
-                  <View style={styles.movingLinesCard}>
-                    <Text style={styles.movingLinesText}>{deepInterpretation.lineas_moviles}</Text>
+                  <View style={styles.mutatingLinesIndicator}>
+                    <Text style={styles.mutatingLinesText}>
+                      Líneas móviles: {deepInterpretation.transformacion.lineas_mutantes.map(l => l + 1).join(', ')}
+                    </Text>
+                  </View>
+                  <Text style={styles.transformationText}>
+                    {deepInterpretation.transformacion.consejo_mutacion}
+                  </Text>
+                </View>
+              )}
+
+              {/* Situación Futura */}
+              {deepInterpretation.futuro && (
+                <View style={styles.futureSection}>
+                  <View style={styles.arrow}>
+                    <Ionicons name="arrow-down" size={40} color="#FFD700" />
+                  </View>
+                  <View style={styles.futureCard}>
+                    <Text style={styles.emojiLarge}>{deepInterpretation.futuro.icono}</Text>
+                    <Text style={styles.futureTitle}>{deepInterpretation.futuro.nombre}</Text>
+                    <Text style={styles.futureNumber}>Hexagrama #{deepInterpretation.futuro.numero}</Text>
+                    <Text style={styles.futureMessage}>{deepInterpretation.futuro.mensaje}</Text>
                   </View>
                 </View>
               )}
 
               {/* Plan de Acción */}
-              <View style={styles.section}>
+              <View style={styles.actionPlanSection}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="list" size={20} color="#FFD700" />
+                  <Ionicons name="list-circle" size={24} color="#FFD700" />
                   <Text style={styles.sectionTitle}>Tu Plan de Acción</Text>
                 </View>
-                {deepInterpretation.plan_accion.map((step, index) => (
-                  <View key={index} style={styles.actionStep}>
-                    <View style={styles.stepNumber}>
-                      <Text style={styles.stepNumberText}>{index + 1}</Text>
+                {deepInterpretation.plan_accion.map((action) => (
+                  <View key={action.paso} style={styles.actionCard}>
+                    <View style={styles.actionNumber}>
+                      <Text style={styles.actionNumberText}>{action.paso}</Text>
                     </View>
-                    <Text style={styles.stepText}>{step}</Text>
+                    <View style={styles.actionContent}>
+                      <Text style={styles.actionTitle}>{action.titulo}</Text>
+                      <Text style={styles.actionDetail}>{action.detalle}</Text>
+                    </View>
                   </View>
                 ))}
               </View>
-
-              {/* Consejo del Sabio */}
-              <View style={styles.sageAdvice}>
-                <View style={styles.sageHeader}>
-                  <Ionicons name="leaf" size={24} color="#FFD700" />
-                  <Text style={styles.sageTitle}>Consejo del Sabio</Text>
-                </View>
-                <Text style={styles.sageText}>{deepInterpretation.consejo_sabio}</Text>
-              </View>
-
-              {/* Resultado Esperado */}
-              {deepInterpretation.resultado_esperado && (
-                <View style={styles.futureCard}>
-                  <View style={styles.futureHeader}>
-                    <Ionicons name="compass" size={20} color="#FFD700" />
-                    <Text style={styles.futureTitle}>Hacia Dónde Te Diriges</Text>
-                  </View>
-                  <Text style={styles.futureText}>{deepInterpretation.resultado_esperado}</Text>
-                </View>
-              )}
             </View>
           )}
 
