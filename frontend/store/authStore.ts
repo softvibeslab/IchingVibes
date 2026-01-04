@@ -100,7 +100,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       const data = await response.json();
-      await SecureStore.setItemAsync('token', data.access_token);
+      await storage.setItem('token', data.access_token);
       set({ token: data.access_token });
 
       // Obtener info del usuario
@@ -115,14 +115,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await SecureStore.deleteItemAsync('token');
+    await storage.deleteItem('token');
     set({ user: null, token: null, isAuthenticated: false });
   },
 
   loadToken: async () => {
     try {
       set({ isLoading: true });
-      const token = await SecureStore.getItemAsync('token');
+      const token = await storage.getItem('token');
       
       if (token) {
         set({ token });
@@ -136,7 +136,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           set({ user: userData, isAuthenticated: true });
         } else {
           // Token inválido
-          await SecureStore.deleteItemAsync('token');
+          await storage.deleteItem('token');
           set({ token: null, user: null, isAuthenticated: false });
         }
       }
