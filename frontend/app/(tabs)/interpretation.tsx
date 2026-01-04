@@ -322,6 +322,12 @@ export default function InterpretationScreen() {
                     <View style={styles.actionContent}>
                       <Text style={styles.actionTitle}>{action.titulo}</Text>
                       <Text style={styles.actionDetail}>{action.detalle}</Text>
+                      {action.timing && (
+                        <View style={styles.timingBadge}>
+                          <Ionicons name="time" size={12} color="#0f0e17" />
+                          <Text style={styles.timingText}>{action.timing}</Text>
+                        </View>
+                      )}
                     </View>
                   </View>
                 ))}
