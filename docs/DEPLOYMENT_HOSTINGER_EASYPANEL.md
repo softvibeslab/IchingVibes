@@ -1097,7 +1097,255 @@ Deberías recibir un token JWT.
 
 ## 12. Paso 11: Verificación Final
 
-### 12.1 Checklist de verificación
+### 12.1 Script Maestro de Validación
+
+Crea este script en tu VPS para validar todo el deployment:
+
+```bash
+#!/bin/bash
+# Guardar como: /root/validate_deployment.sh
+# Ejecutar: chmod +x /root/validate_deployment.sh && ./validate_deployment.sh
+
+# Colores
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+# Configuración - EDITAR ESTOS VALORES
+DOMAIN="tu-dominio.com"
+API_DOMAIN="api.tu-dominio.com"
+DEMO_EMAIL="maria@demo.com"
+DEMO_PASSWORD="demo123"
+
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║     🔍 VALIDACIÓN COMPLETA DE DEPLOYMENT - I Ching Oracle     ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo ""
+
+ERRORS=0
+WARNINGS=0
+
+# Función para verificar
+check() {
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✅ $1${NC}"
+        return 0
+    else
+        echo -e "${RED}❌ $1${NC}"
+        ((ERRORS++))
+        return 1
+    fi
+}
+
+warn() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+    ((WARNINGS++))
+}
+
+# ═══════════════════════════════════════════════════════════════
+# SECCIÓN 1: CONTENEDORES DOCKER
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "📦 SECCIÓN 1: CONTENEDORES DOCKER"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+echo -n "1.1 MongoDB corriendo: "
+docker ps | grep -q mongo
+check "MongoDB"
+
+echo -n "1.2 Backend corriendo: "
+docker ps | grep -q backend
+check "Backend"
+
+echo -n "1.3 Frontend corriendo: "
+docker ps | grep -q frontend
+check "Frontend"
+
+echo -n "1.4 MongoDB healthy: "
+docker ps | grep mongo | grep -q "(healthy)"
+check "MongoDB healthy" || warn "MongoDB no reporta healthy (puede estar iniciando)"
+
+echo -n "1.5 Backend healthy: "
+docker ps | grep backend | grep -q "(healthy)"
+check "Backend healthy" || warn "Backend no reporta healthy"
+
+# ═══════════════════════════════════════════════════════════════
+# SECCIÓN 2: CONECTIVIDAD INTERNA
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔗 SECCIÓN 2: CONECTIVIDAD INTERNA"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+echo -n "2.1 MongoDB acepta conexiones: "
+docker exec iching-mongodb mongosh --eval "db.adminCommand('ping')" > /dev/null 2>&1
+check "MongoDB ping"
+
+echo -n "2.2 Backend health check interno: "
+HEALTH=$(docker exec iching-backend curl -s http://localhost:8001/api/health 2>/dev/null)
+echo "$HEALTH" | grep -q '"healthy"'
+check "Backend health"
+
+echo -n "2.3 Backend conecta a MongoDB: "
+echo "$HEALTH" | grep -q '"database": "healthy"'
+check "Backend-MongoDB conexión"
+
+echo -n "2.4 Frontend sirve contenido: "
+docker exec iching-frontend curl -s http://localhost/ | grep -q "html"
+check "Frontend serving"
+
+# ═══════════════════════════════════════════════════════════════
+# SECCIÓN 3: CONECTIVIDAD EXTERNA
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🌐 SECCIÓN 3: CONECTIVIDAD EXTERNA"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+echo -n "3.1 Frontend accesible (HTTP): "
+curl -s -o /dev/null -w "%{http_code}" "http://$DOMAIN" | grep -q "200\|301\|302"
+check "Frontend HTTP"
+
+echo -n "3.2 Frontend accesible (HTTPS): "
+curl -s -o /dev/null -w "%{http_code}" "https://$DOMAIN" 2>/dev/null | grep -q "200"
+check "Frontend HTTPS" || warn "HTTPS no configurado aún"
+
+echo -n "3.3 API Health (HTTP): "
+curl -s "http://$API_DOMAIN/api/health" 2>/dev/null | grep -q '"healthy"'
+check "API HTTP"
+
+echo -n "3.4 API Health (HTTPS): "
+curl -s "https://$API_DOMAIN/api/health" 2>/dev/null | grep -q '"healthy"'
+check "API HTTPS" || warn "HTTPS no configurado aún"
+
+# ═══════════════════════════════════════════════════════════════
+# SECCIÓN 4: FUNCIONALIDAD DE LA APLICACIÓN
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "⚙️  SECCIÓN 4: FUNCIONALIDAD"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Login
+echo -n "4.1 Login funciona: "
+TOKEN=$(curl -s -X POST "http://$API_DOMAIN/api/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$DEMO_EMAIL\",\"password\":\"$DEMO_PASSWORD\"}" 2>/dev/null | \
+    grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+[ -n "$TOKEN" ]
+check "Login"
+
+if [ -n "$TOKEN" ]; then
+    echo -n "4.2 Obtener usuario: "
+    curl -s "http://$API_DOMAIN/api/auth/me" \
+        -H "Authorization: Bearer $TOKEN" | grep -q "email"
+    check "Get user"
+
+    echo -n "4.3 Listar lecturas: "
+    READINGS=$(curl -s "http://$API_DOMAIN/api/readings" \
+        -H "Authorization: Bearer $TOKEN")
+    echo "$READINGS" | grep -q "\[" 
+    check "List readings"
+
+    # Contar lecturas
+    COUNT=$(echo "$READINGS" | grep -o '"id"' | wc -l)
+    echo "   └── $COUNT lecturas encontradas"
+else
+    echo -e "${RED}4.2 - 4.3 Saltados (no hay token)${NC}"
+    ((ERRORS+=2))
+fi
+
+# ═══════════════════════════════════════════════════════════════
+# SECCIÓN 5: SSL/TLS
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔒 SECCIÓN 5: SSL/TLS"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+echo -n "5.1 Certificado frontend válido: "
+curl -s -o /dev/null -w "%{http_code}" --max-time 5 "https://$DOMAIN" 2>/dev/null | grep -q "200"
+check "SSL Frontend" || warn "SSL aún no configurado para frontend"
+
+echo -n "5.2 Certificado API válido: "
+curl -s -o /dev/null -w "%{http_code}" --max-time 5 "https://$API_DOMAIN/api/health" 2>/dev/null | grep -q "200"
+check "SSL API" || warn "SSL aún no configurado para API"
+
+# ═══════════════════════════════════════════════════════════════
+# SECCIÓN 6: RECURSOS DEL SISTEMA
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "💻 SECCIÓN 6: RECURSOS DEL SISTEMA"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Uso de disco
+DISK_USAGE=$(df -h / | tail -1 | awk '{print $5}' | tr -d '%')
+echo -n "6.1 Disco disponible ($DISK_USAGE% usado): "
+[ "$DISK_USAGE" -lt 85 ]
+check "Disco OK" || warn "Disco por encima del 85%"
+
+# Uso de memoria
+MEM_USAGE=$(free | grep Mem | awk '{printf "%.0f", $3/$2 * 100}')
+echo -n "6.2 Memoria disponible ($MEM_USAGE% usado): "
+[ "$MEM_USAGE" -lt 90 ]
+check "Memoria OK" || warn "Memoria por encima del 90%"
+
+# Docker disk usage
+echo "6.3 Uso de disco Docker:"
+docker system df
+
+# ═══════════════════════════════════════════════════════════════
+# RESUMEN
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║                      📊 RESUMEN                               ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo ""
+
+if [ $ERRORS -eq 0 ]; then
+    echo -e "${GREEN}🎉 ¡DEPLOYMENT EXITOSO!${NC}"
+    echo ""
+    echo "Todas las verificaciones pasaron correctamente."
+else
+    echo -e "${RED}❌ DEPLOYMENT CON ERRORES${NC}"
+    echo ""
+    echo "Errores encontrados: $ERRORS"
+fi
+
+if [ $WARNINGS -gt 0 ]; then
+    echo -e "${YELLOW}Advertencias: $WARNINGS${NC}"
+fi
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "URLs de tu aplicación:"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  🌐 Frontend:  https://$DOMAIN"
+echo "  🔌 API:       https://$API_DOMAIN"
+echo "  📚 API Docs:  https://$API_DOMAIN/docs"
+echo "  🏥 Health:    https://$API_DOMAIN/api/health"
+echo ""
+echo "Credenciales demo:"
+echo "  📧 Email:     $DEMO_EMAIL"
+echo "  🔑 Password:  $DEMO_PASSWORD"
+echo ""
+
+exit $ERRORS
+```
+
+#### Ejecutar validación:
+
+```bash
+# Dar permisos y ejecutar
+chmod +x /root/validate_deployment.sh
+./validate_deployment.sh
+```
+
+### 12.2 Checklist de verificación manual
 
 Ejecuta estas pruebas:
 
@@ -1114,14 +1362,25 @@ curl -s -o /dev/null -w "%{http_code}" https://tu-dominio.com
 
 # 3. Login funciona
 echo "3. Login:"
-curl -s -X POST https://api.tu-dominio.com/api/auth/login \
+TOKEN=$(curl -s -X POST https://api.tu-dominio.com/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"maria@demo.com","password":"demo123"}' | jq .access_token
+  -d '{"email":"maria@demo.com","password":"demo123"}' | jq -r .access_token)
+
+if [ "$TOKEN" != "null" ] && [ -n "$TOKEN" ]; then
+  echo "✅ Login exitoso - Token obtenido"
+else
+  echo "❌ Login fallido"
+fi
+
+# 4. Verificar lecturas
+echo "4. Obtener lecturas:"
+curl -s "https://api.tu-dominio.com/api/readings" \
+  -H "Authorization: Bearer $TOKEN" | jq 'length'
 
 echo "✅ Verificación completada"
 ```
 
-### 12.2 Probar la aplicación
+### 12.3 Probar la aplicación
 
 1. Abrir `https://tu-dominio.com` en el navegador
 2. Iniciar sesión con `maria@demo.com` / `demo123`
@@ -1129,11 +1388,43 @@ echo "✅ Verificación completada"
 4. Generar interpretación con IA
 5. Verificar historial
 
-### 12.3 Probar en móvil
+### 12.4 Probar en móvil
 
 1. Abrir `https://tu-dominio.com` en el navegador móvil
 2. Agregar a pantalla de inicio (PWA)
 3. Probar funcionalidad de shake (si está disponible)
+
+### 12.5 Verificación de integración con IA
+
+```bash
+# Crear una lectura de prueba y verificar interpretación
+API="https://api.tu-dominio.com"
+
+# Login
+TOKEN=$(curl -s -X POST "$API/api/auth/login" \
+    -H "Content-Type: application/json" \
+    -d '{"email":"maria@demo.com","password":"demo123"}' | jq -r .access_token)
+
+# Obtener una lectura existente
+READING_ID=$(curl -s "$API/api/readings" \
+    -H "Authorization: Bearer $TOKEN" | jq -r '.[0].id')
+
+echo "Reading ID: $READING_ID"
+
+# Solicitar interpretación IA
+echo "Solicitando interpretación IA..."
+INTERPRETATION=$(curl -s -X POST "$API/api/readings/$READING_ID/interpret" \
+    -H "Authorization: Bearer $TOKEN")
+
+# Verificar respuesta
+if echo "$INTERPRETATION" | jq -e '.interpretation.presente' > /dev/null 2>&1; then
+    echo "✅ Interpretación IA funcionando"
+    echo "Hexagrama: $(echo "$INTERPRETATION" | jq -r '.interpretation.presente.nombre')"
+else
+    echo "❌ Error en interpretación IA"
+    echo "$INTERPRETATION" | jq .
+fi
+```
 
 ---
 
