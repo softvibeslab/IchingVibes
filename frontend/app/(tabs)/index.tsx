@@ -129,6 +129,8 @@ export default function OracleScreen() {
         throw new Error('Error al guardar la lectura');
       }
 
+      const data = await response.json();
+
       Alert.alert(
         'Guardado',
         'Tu consulta ha sido guardada exitosamente',
@@ -136,7 +138,6 @@ export default function OracleScreen() {
           {
             text: 'Ver Interpretación',
             onPress: () => {
-              const data = await response.json();
               router.push({
                 pathname: '/(tabs)/interpretation',
                 params: { readingId: data.id },
