@@ -101,3 +101,145 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Test backend API completo del I Ching Oracle"
+
+backend:
+  - task: "Health Check API"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "GET /api/ endpoint working correctly. Returns status 200 with message 'I Ching Oracle API'"
+
+  - task: "User Registration"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "POST /api/auth/register working correctly. Creates new users and returns JWT token. Properly handles duplicate email validation."
+
+  - task: "User Login"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "POST /api/auth/login working correctly. Validates credentials and returns JWT token."
+
+  - task: "Get Current User"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "Initial test failed with 520 error due to ObjectId conversion issue in User model"
+        - working: true
+          agent: "testing"
+          comment: "FIXED: GET /api/auth/me now working correctly. Fixed ObjectId to string conversion in get_current_user function. Returns user info with proper authentication."
+
+  - task: "Get Hexagram by Number"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "GET /api/hexagrams/{number} working correctly. Returns hexagram data in Spanish. Properly validates number range (1-64) and rejects invalid numbers with 400 status."
+
+  - task: "Create I Ching Reading"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "Initial test failed with 520 error due to ObjectId conversion issue"
+        - working: true
+          agent: "testing"
+          comment: "FIXED: POST /api/readings now working correctly. Creates readings with complete hexagram data, handles changing lines, and returns full interpretation in Spanish."
+
+  - task: "Get User Reading History"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "Initial test failed with 520 error due to ObjectId conversion issue"
+        - working: true
+          agent: "testing"
+          comment: "FIXED: GET /api/readings now working correctly. Returns user's reading history with pagination support and complete hexagram data."
+
+  - task: "Get Specific Reading"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "Initial test failed with 520 error due to ObjectId conversion issue"
+        - working: true
+          agent: "testing"
+          comment: "FIXED: GET /api/readings/{id} now working correctly. Returns specific reading with complete hexagram interpretation and proper user authorization."
+
+  - task: "Authentication Security"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "JWT authentication working correctly. Protected endpoints properly reject unauthorized requests (403 for missing token, 401 for invalid token)."
+
+frontend:
+  # No frontend testing requested
+
+metadata:
+  created_by: "testing_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus: []
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    - agent: "testing"
+      message: "Completed comprehensive backend API testing for I Ching Oracle. All 9 core endpoints tested successfully. Fixed critical ObjectId conversion issue in authentication system. All authentication flows, hexagram retrieval, and reading CRUD operations working correctly with Spanish content."
