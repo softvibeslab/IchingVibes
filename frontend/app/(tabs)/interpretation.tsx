@@ -17,13 +17,25 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
+interface RecursosExternos {
+  fer: string;
+  ora: string;
+}
+
+interface Metadatos {
+  tono_general: string;
+  elemento_clave: string;
+  virtud_recomendada: string;
+}
+
 interface DeepInterpretation {
-  // Formato de la gema personalizada
+  // Formato de la gema personalizada mejorada
   presente: {
     numero: number;
     nombre: string;
     icono: string;
     mensaje_principal: string;
+    recursos_externos?: RecursosExternos;
   };
   transformacion: {
     lineas_mutantes: number[];
@@ -34,12 +46,15 @@ interface DeepInterpretation {
     nombre: string;
     mensaje: string;
     icono: string;
+    recursos_externos?: RecursosExternos;
   };
   plan_accion: Array<{
     paso: number;
     titulo: string;
     detalle: string;
+    timing?: string;
   }>;
+  metadatos?: Metadatos;
 }
 
 export default function InterpretationScreen() {
