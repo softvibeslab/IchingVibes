@@ -87,6 +87,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     if user is None:
         raise credentials_exception
     
+    # Convert ObjectId to string for Pydantic model
+    user["_id"] = str(user["_id"])
     return User(**user)
 
 
