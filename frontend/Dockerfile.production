@@ -4,13 +4,13 @@
 # Multi-stage build for optimized production image
 
 # Stage 1: Build the Expo web app
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 # Install dependencies first (better caching)
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -24,6 +24,9 @@ RUN npx expo export --platform web
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
+
+# Install curl for health check
+RUN apk add --no-cache curl
 
 # Copy built files
 COPY --from=builder /app/dist /usr/share/nginx/html
