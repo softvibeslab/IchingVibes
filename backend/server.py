@@ -16,6 +16,7 @@ from models import (
     ReadingCreate, Reading, ReadingResponse, CoinThrow
 )
 from iching_data import get_hexagram
+from interpretation_service import generate_deep_interpretation
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
