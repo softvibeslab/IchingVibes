@@ -17,6 +17,7 @@ from models import (
 )
 from iching_data import get_hexagram
 from interpretation_service import generate_deep_interpretation
+from interpretation_service_custom import generate_custom_interpretation
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
