@@ -698,24 +698,115 @@ npx expo export --platform web
 
 ### 9.2 Opción A: Servir con Nginx (Recomendado)
 
-#### Crear Dockerfile para frontend:
+#### 🖱️ Desde Easypanel UI:
 
-```dockerfile
-# frontend/Dockerfile.production
+1. Click en **"+ Service"**
+2. Seleccionar **"App"**
+3. Configurar como se indica abajo
+
+#### 💻 Desde Terminal SSH:
+
+```bash
+# Crear Dockerfile de producción para frontend
+cat > /opt/iching-oracle/frontend/Dockerfile.production << 'EOF'
+# Stage 1: Build
 FROM node:18-alpine AS builder
 WORKDIR /app
+
+# Instalar dependencias
 COPY package*.json ./
 RUN npm ci
+
+# Copiar código fuente
 COPY . .
+
+# Variable de entorno para el build
 ARG EXPO_PUBLIC_BACKEND_URL
 ENV EXPO_PUBLIC_BACKEND_URL=$EXPO_PUBLIC_BACKEND_URL
+
+# Build para web
 RUN npx expo export --platform web
 
+# Stage 2: Servir con Nginx
 FROM nginx:alpine
+
+# Copiar build
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copiar configuración de nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
+EOF
+
+# Crear configuración de Nginx
+cat > /opt/iching-oracle/frontend/nginx.conf << 'EOF'
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Gzip
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript;
+
+    # Cache de assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # SPA - todas las rutas van a index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Health check
+    location /health {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+    }
+}
+EOF
+
+# Agregar frontend al docker-compose
+cat >> /etc/easypanel/projects/iching-oracle/docker-compose.yml << 'EOF'
+
+  frontend:
+    build:
+      context: /opt/iching-oracle/frontend
+      dockerfile: Dockerfile.production
+      args:
+        EXPO_PUBLIC_BACKEND_URL: https://api.tu-dominio.com
+    container_name: iching-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - iching-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+EOF
+
+# Construir y levantar frontend
+cd /etc/easypanel/projects/iching-oracle
+docker-compose up -d --build frontend
+
+# Ver logs
+docker logs -f iching-frontend
 ```
 
 #### Crear nginx.conf para frontend:
@@ -772,6 +863,139 @@ server {
 1. Click en **"Deploy"**
 2. Verificar logs
 3. Estado: **"Running"** ✅
+
+### ✅ 9.8 VALIDACIÓN: Verificar Frontend
+
+#### Desde Terminal SSH:
+
+```bash
+# 1. Verificar contenedor
+echo "1️⃣ Estado del contenedor:"
+docker ps | grep frontend
+# ✅ Debe mostrar: iching-frontend ... Up X minutes (healthy)
+
+# 2. Verificar logs
+echo "2️⃣ Logs de Nginx:"
+docker logs --tail 20 iching-frontend
+# ✅ No debe haber errores
+
+# 3. Health check interno
+echo "3️⃣ Health check:"
+docker exec iching-frontend curl -s http://localhost/health
+# ✅ Debe mostrar: healthy
+
+# 4. Verificar que index.html existe
+echo "4️⃣ Verificar build:"
+docker exec iching-frontend ls -la /usr/share/nginx/html/
+# ✅ Debe mostrar: index.html y carpetas de assets
+
+# 5. Probar desde el host
+echo "5️⃣ Acceso desde host:"
+curl -s -o /dev/null -w "%{http_code}" http://localhost/
+# ✅ Debe mostrar: 200
+
+# 6. Verificar que carga el HTML
+echo "6️⃣ Verificar contenido:"
+curl -s http://localhost/ | head -5
+# ✅ Debe mostrar: <!DOCTYPE html>...
+```
+
+#### Script de validación completa:
+
+```bash
+#!/bin/bash
+# Guardar como: validate_frontend.sh
+
+echo "🔍 Validando Frontend..."
+echo "========================"
+
+# 1. Contenedor corriendo
+echo -n "1. Contenedor: "
+if docker ps | grep -q iching-frontend; then
+    echo "✅ Corriendo"
+else
+    echo "❌ No está corriendo"
+    exit 1
+fi
+
+# 2. Health check
+echo -n "2. Health check: "
+HEALTH=$(docker exec iching-frontend curl -s http://localhost/health 2>/dev/null)
+if [ "$HEALTH" = "healthy" ]; then
+    echo "✅ OK"
+else
+    echo "❌ Fallo: $HEALTH"
+fi
+
+# 3. Index.html existe
+echo -n "3. Build existe: "
+if docker exec iching-frontend test -f /usr/share/nginx/html/index.html; then
+    echo "✅ OK"
+else
+    echo "❌ index.html no encontrado"
+    exit 1
+fi
+
+# 4. HTTP response
+echo -n "4. HTTP 200: "
+CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/)
+if [ "$CODE" = "200" ]; then
+    echo "✅ OK"
+else
+    echo "❌ Código: $CODE"
+fi
+
+# 5. Contiene React/Expo
+echo -n "5. Contenido válido: "
+if curl -s http://localhost/ | grep -q "root"; then
+    echo "✅ OK"
+else
+    echo "❌ No parece ser una app React"
+fi
+
+echo ""
+echo "🎉 Frontend validado correctamente!"
+```
+
+#### Checklist de validación:
+
+| # | Verificación | Comando | ✅ Esperado |
+|---|--------------|---------|-------------|
+| 1 | Contenedor activo | `docker ps \| grep frontend` | Status: Up (healthy) |
+| 2 | Nginx sin errores | `docker logs iching-frontend` | Sin errores |
+| 3 | Health check | `curl /health` | "healthy" |
+| 4 | HTTP 200 | `curl -I http://localhost/` | HTTP 200 |
+| 5 | index.html existe | `ls /usr/share/nginx/html/` | index.html presente |
+| 6 | Assets cargados | Abrir en navegador | Sin errores en console |
+
+**⚠️ NO continúes al siguiente paso hasta que todas las validaciones pasen.**
+
+#### 🔧 Troubleshooting Frontend:
+
+**Error: "502 Bad Gateway"**
+```bash
+# Verificar que nginx está corriendo
+docker exec iching-frontend nginx -t
+docker exec iching-frontend cat /var/log/nginx/error.log
+```
+
+**Error: "Build failed"**
+```bash
+# Ver logs del build
+docker-compose logs frontend
+
+# Reconstruir sin cache
+docker-compose build --no-cache frontend
+```
+
+**Página en blanco:**
+```bash
+# Verificar que el build existe
+docker exec iching-frontend ls -la /usr/share/nginx/html/
+
+# Verificar variables de entorno durante build
+docker exec iching-frontend cat /usr/share/nginx/html/index.html | grep BACKEND
+```
 
 ---
 
