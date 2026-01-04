@@ -11,13 +11,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 import { HexagramDisplay } from '../../components/HexagramDisplay';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+
+interface DeepInterpretation {
+  titulo: string;
+  analisis: string;
+  lineas_moviles: string | null;
+  plan_accion: string[];
+  consejo_sabio: string;
+  resultado_esperado: string | null;
+  keywords: string[];
+}
 
 export default function InterpretationScreen() {
   const router = useRouter();
   const { readingId } = useLocalSearchParams();
   const { token } = useAuthStore();
   const [reading, setReading] = useState<any>(null);
+  const [deepInterpretation, setDeepInterpretation] = useState<DeepInterpretation | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingInterpretation, setLoadingInterpretation] = useState(false);
 
   useEffect(() => {
     if (readingId) {
@@ -40,6 +53,26 @@ export default function InterpretationScreen() {
       console.error('Error fetching reading:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateDeepInterpretation = async () => {
+    setLoadingInterpretation(true);
+    try {
+      const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+      const response = await fetch(`${API_URL}/api/readings/${readingId}/interpret`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDeepInterpretation(data.interpretation);
+      }
+    } catch (error) {
+      console.error('Error generating interpretation:', error);
+    } finally {
+      setLoadingInterpretation(false);
     }
   };
 
