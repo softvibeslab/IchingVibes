@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://iching-oraculo.preview.emergentagent.com/api"
+BASE_URL = "https://oraculo-fisica.preview.emergentagent.com/api"
 TEST_USER_EMAIL = "maria.gonzalez@example.com"
 TEST_USER_PASSWORD = "MiClave123!"
 TEST_USER_NAME = "María González"
