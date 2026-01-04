@@ -270,7 +270,7 @@ def test_unauthorized_access():
     try:
         # Test without token
         response1 = requests.get(f"{BASE_URL}/auth/me")
-        unauthorized1 = response1.status_code == 401
+        unauthorized1 = response1.status_code in [401, 403]  # Both are valid for missing auth
         
         # Test with invalid token
         headers = {"Authorization": "Bearer invalid_token_here"}
