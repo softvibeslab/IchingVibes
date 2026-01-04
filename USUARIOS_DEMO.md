@@ -74,7 +74,7 @@ Consultas: 2
 Para verificar que las credenciales funcionan, ejecuta:
 
 ```bash
-curl -X POST https://iching-oraculo.preview.emergentagent.com/api/auth/login \
+curl -X POST https://oraculo-fisica.preview.emergentagent.com/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"maria@demo.com","password":"demo123"}'
 ```
@@ -92,16 +92,16 @@ curl -X POST https://iching-oraculo.preview.emergentagent.com/api/auth/login \
    - Password: `demo123` (sin espacios)
 
 2. **Verifica la conexión:**
-   - Backend URL: `https://iching-oraculo.preview.emergentagent.com/api`
+   - Backend URL: `https://oraculo-fisica.preview.emergentagent.com/api`
    - Status: Debe retornar 200 OK
 
 3. **Prueba desde terminal:**
    ```bash
    # Test backend
-   curl https://iching-oraculo.preview.emergentagent.com/api/
+   curl https://oraculo-fisica.preview.emergentagent.com/api/
    
    # Test login
-   curl -X POST https://iching-oraculo.preview.emergentagent.com/api/auth/login \
+   curl -X POST https://oraculo-fisica.preview.emergentagent.com/api/auth/login \
      -H "Content-Type: application/json" \
      -d '{"email":"maria@demo.com","password":"demo123"}'
    ```

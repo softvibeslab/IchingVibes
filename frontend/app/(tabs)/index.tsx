@@ -34,35 +34,47 @@ export default function OracleScreen() {
   const [result, setResult] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState(false);
+  const [shakeIndicator, setShakeIndicator] = useState(false);
 
   useEffect(() => {
     requestPermissions();
     return () => {
       sensorManager.stop();
+      sensorManager.removeShakeCallback();
     };
   }, []);
 
+  // Actualizar el callback de shake cuando cambian las dependencias
+  useEffect(() => {
+    if (permissionGranted) {
+      sensorManager.onShake(() => {
+        if (!isAnimating && currentThrow < 6) {
+          // Mostrar indicador visual
+          setShakeIndicator(true);
+          setTimeout(() => setShakeIndicator(false), 500);
+          handleThrowCoins();
+        }
+      });
+    }
+  }, [permissionGranted, isAnimating, currentThrow]);
+
   const requestPermissions = async () => {
     try {
+      // En web, los sensores pueden no estar disponibles
       const { status } = await Accelerometer.requestPermissionsAsync();
       if (status === 'granted') {
         setPermissionGranted(true);
         await sensorManager.start();
-        
-        // Configurar detector de sacudida
-        sensorManager.onShake(() => {
-          if (!isAnimating && currentThrow < 6) {
-            handleThrowCoins();
-          }
-        });
+        console.log('✅ Sensor permissions granted');
       } else {
-        Alert.alert(
-          'Permisos Requeridos',
-          'Esta app necesita acceso al acelerómetro para detectar sacudidas del dispositivo.'
-        );
+        // En web, permitir uso sin sensores (solo botón)
+        console.log('⚠️ Sensor permissions not granted, button-only mode');
+        setPermissionGranted(true); // Permitir uso sin sensores
       }
     } catch (error) {
       console.error('Error requesting permissions:', error);
+      // En caso de error, permitir uso sin sensores
+      setPermissionGranted(true);
     }
   };
 
@@ -70,16 +82,24 @@ export default function OracleScreen() {
     if (isAnimating) return;
 
     setIsAnimating(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    
+    // Feedback háptico inmediato
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    } catch (e) {
+      console.log('Haptics not available');
+    }
 
-    // Obtener entropía del sensor
-    const entropy = sensorManager.getEntropy();
+    // Obtener entropía del sensor (o usar random si no hay sensores)
+    const entropy = sensorManager.isActive() 
+      ? sensorManager.getEntropy() 
+      : Math.random();
     
     // Lanzar monedas
     const coins = throwCoins(entropy);
     setCoinValues(coins);
 
-    // Procesar tirada después de la animación
+    // Procesar tirada después de la animación (1.2 segundos)
     setTimeout(() => {
       const throw_result = processThrow(coins);
       const newThrows = [...throws, throw_result];
@@ -87,8 +107,12 @@ export default function OracleScreen() {
       setCurrentThrow(currentThrow + 1);
       setIsAnimating(false);
 
-      // Feedback háptico
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Feedback háptico de éxito
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch (e) {
+        console.log('Haptics not available');
+      }
 
       // Si completamos las 6 tiradas
       if (newThrows.length === 6) {
@@ -301,16 +325,24 @@ export default function OracleScreen() {
 
           {/* Área de monedas */}
           <View style={styles.coinArea}>
-            <Text style={styles.instructionText}>
-              {isAnimating
-                ? 'Lanzando monedas...'
-                : 'Sacude tu dispositivo o toca el botón'}
-            </Text>
+            {/* Indicador de shake */}
+            <View style={[
+              styles.shakeIndicator,
+              shakeIndicator && styles.shakeIndicatorActive,
+            ]}>
+              <Text style={styles.instructionText}>
+                {isAnimating
+                  ? '✨ Lanzando monedas...'
+                  : currentThrow >= 6
+                    ? '🎋 Hexagrama completado'
+                    : '📳 Sacude tu dispositivo o toca el botón'}
+              </Text>
+            </View>
 
             {/* Monedas */}
             {coinValues.map((value, index) => (
               <Coin
-                key={index}
+                key={`coin-${currentThrow}-${index}`}
                 value={value}
                 index={index}
                 position={getCoinPosition(index)}
@@ -324,12 +356,18 @@ export default function OracleScreen() {
             style={[
               styles.throwButton,
               (isAnimating || currentThrow >= 6) && styles.throwButtonDisabled,
+              shakeIndicator && styles.throwButtonShaking,
             ]}
             onPress={handleThrowCoins}
             disabled={isAnimating || currentThrow >= 6}
+            activeOpacity={0.7}
           >
             <Text style={styles.throwButtonText}>
-              {isAnimating ? 'Lanzando...' : 'Lanzar Monedas'}
+              {isAnimating 
+                ? '⏳ Lanzando...' 
+                : currentThrow >= 6 
+                  ? '✅ Completado' 
+                  : '🪙 Lanzar Monedas'}
             </Text>
           </TouchableOpacity>
 
@@ -452,10 +490,26 @@ const styles = StyleSheet.create({
   throwButtonDisabled: {
     opacity: 0.5,
   },
+  throwButtonShaking: {
+    backgroundColor: '#FFE55C',
+    transform: [{ scale: 1.02 }],
+  },
   throwButtonText: {
     color: '#0f0e17',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  shakeIndicator: {
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.2)',
+  },
+  shakeIndicatorActive: {
+    backgroundColor: 'rgba(255, 215, 0, 0.3)',
+    borderColor: '#FFD700',
   },
   historyContainer: {
     backgroundColor: '#1a1a2e',

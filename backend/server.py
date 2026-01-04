@@ -16,6 +16,8 @@ from models import (
     ReadingCreate, Reading, ReadingResponse, CoinThrow
 )
 from iching_data import get_hexagram
+from interpretation_service import generate_deep_interpretation
+from interpretation_service_custom import generate_custom_interpretation
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -49,6 +51,25 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+# === HEALTH CHECK ===
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint for deployment verification"""
+    try:
+        # Test MongoDB connection
+        await db.command('ping')
+        db_status = "healthy"
+    except Exception as e:
+        db_status = f"unhealthy: {str(e)}"
+    
+    return {
+        "status": "healthy",
+        "service": "I Ching Oracle API",
+        "database": db_status,
+        "version": "1.0.0"
+    }
 
 
 # === UTILITY FUNCTIONS ===
@@ -266,6 +287,75 @@ async def get_reading(
         changing_lines=reading.get("changing_lines", []),
         created_at=reading["created_at"]
     )
+
+@api_router.post("/readings/{reading_id}/interpret")
+async def get_deep_interpretation(
+    reading_id: str,
+    current_user: User = Depends(get_current_user),
+    use_custom: bool = True  # Por defecto usar la gema personalizada
+):
+    """Generar interpretación profunda usando IA (Gema personalizada o Gemini estándar)"""
+    from bson import ObjectId
+    
+    try:
+        reading = await readings_collection.find_one({
+            "_id": ObjectId(reading_id),
+            "user_id": str(current_user.id)
+        })
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lectura no encontrada"
+        )
+    
+    if not reading:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lectura no encontrada"
+        )
+    
+    # Obtener datos completos de hexagramas
+    present_hex_data = get_hexagram(reading["present_hexagram"])
+    future_hex_data = get_hexagram(reading["future_hexagram"]) if reading.get("future_hexagram") else None
+    
+    # Generar interpretación profunda usando el servicio elegido
+    if use_custom:
+        # Usar la gema personalizada del usuario
+        result = generate_custom_interpretation(
+            question=reading.get("question"),
+            present_hexagram=present_hex_data,
+            future_hexagram=future_hex_data,
+            changing_lines=reading.get("changing_lines", []),
+            has_changing_lines=reading.get("has_changing_lines", False),
+            throws=reading.get("throws", [])
+        )
+    else:
+        # Usar Gemini estándar (fallback)
+        result = generate_deep_interpretation(
+            question=reading.get("question"),
+            present_hexagram=present_hex_data,
+            future_hexagram=future_hex_data,
+            changing_lines=reading.get("changing_lines", []),
+            has_changing_lines=reading.get("has_changing_lines", False)
+        )
+    
+    # Guardar la interpretación en la base de datos para caché
+    await readings_collection.update_one(
+        {"_id": ObjectId(reading_id)},
+        {"$set": {"deep_interpretation": result["interpretation"], "interpretation_model": "custom_gem" if use_custom else "gemini_standard"}}
+    )
+    
+    return {
+        "reading_id": reading_id,
+        "interpretation": result["interpretation"],
+        "present_hexagram": present_hex_data,
+        "future_hexagram": future_hex_data,
+        "has_changing_lines": reading.get("has_changing_lines", False),
+        "changing_lines": reading.get("changing_lines", []),
+        "question": reading.get("question"),
+        "model": result.get("model", "unknown"),
+        "success": result.get("success", True)
+    }
 
 @api_router.get("/hexagrams/{number}")
 async def get_hexagram_info(number: int):

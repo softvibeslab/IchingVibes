@@ -1,6 +1,32 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+
+// Helpers para storage multiplataforma (SecureStore en móvil, AsyncStorage en web)
+const storage = {
+  setItem: async (key: string, value: string) => {
+    if (Platform.OS === 'web') {
+      await AsyncStorage.setItem(key, value);
+    } else {
+      await SecureStore.setItemAsync(key, value);
+    }
+  },
+  getItem: async (key: string) => {
+    if (Platform.OS === 'web') {
+      return await AsyncStorage.getItem(key);
+    } else {
+      return await SecureStore.getItemAsync(key);
+    }
+  },
+  deleteItem: async (key: string) => {
+    if (Platform.OS === 'web') {
+      await AsyncStorage.removeItem(key);
+    } else {
+      await SecureStore.deleteItemAsync(key);
+    }
+  },
+};
 
 interface User {
   id: string;
@@ -46,7 +72,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       const data = await response.json();
-      await SecureStore.setItemAsync('token', data.access_token);
+      await storage.setItem('token', data.access_token);
       set({ token: data.access_token });
 
       // Obtener info del usuario
@@ -74,7 +100,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       const data = await response.json();
-      await SecureStore.setItemAsync('token', data.access_token);
+      await storage.setItem('token', data.access_token);
       set({ token: data.access_token });
 
       // Obtener info del usuario
@@ -89,14 +115,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await SecureStore.deleteItemAsync('token');
+    await storage.deleteItem('token');
     set({ user: null, token: null, isAuthenticated: false });
   },
 
   loadToken: async () => {
     try {
       set({ isLoading: true });
-      const token = await SecureStore.getItemAsync('token');
+      const token = await storage.getItem('token');
       
       if (token) {
         set({ token });
@@ -110,7 +136,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           set({ user: userData, isAuthenticated: true });
         } else {
           // Token inválido
-          await SecureStore.deleteItemAsync('token');
+          await storage.deleteItem('token');
           set({ token: null, user: null, isAuthenticated: false });
         }
       }
