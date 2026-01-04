@@ -281,6 +281,29 @@ export default function InterpretationScreen() {
                     <Text style={styles.futureTitle}>{deepInterpretation.futuro.nombre}</Text>
                     <Text style={styles.futureNumber}>Hexagrama #{deepInterpretation.futuro.numero}</Text>
                     <Text style={styles.futureMessage}>{deepInterpretation.futuro.mensaje}</Text>
+                    
+                    {/* Recursos Externos del Futuro */}
+                    {deepInterpretation.futuro.recursos_externos && (
+                      <View style={styles.recursosContainer}>
+                        <Text style={styles.recursosTitle}>Profundiza tu estudio:</Text>
+                        <View style={styles.recursosLinks}>
+                          <TouchableOpacity 
+                            style={styles.recursoLink}
+                            onPress={() => Linking.openURL(deepInterpretation.futuro!.recursos_externos!.ora)}
+                          >
+                            <Ionicons name="book" size={16} color="#FFD700" />
+                            <Text style={styles.recursoText}>Ver en ORA (ES)</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.recursoLink}
+                            onPress={() => Linking.openURL(deepInterpretation.futuro!.recursos_externos!.fer)}
+                          >
+                            <Ionicons name="library" size={16} color="#FFD700" />
+                            <Text style={styles.recursoText}>Ver en FER (PT)</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
                   </View>
                 </View>
               )}
