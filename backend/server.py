@@ -272,9 +272,10 @@ async def get_reading(
 @api_router.post("/readings/{reading_id}/interpret")
 async def get_deep_interpretation(
     reading_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    use_custom: bool = True  # Por defecto usar la gema personalizada
 ):
-    """Generar interpretación profunda usando IA"""
+    """Generar interpretación profunda usando IA (Gema personalizada o Gemini estándar)"""
     from bson import ObjectId
     
     try:
@@ -298,19 +299,31 @@ async def get_deep_interpretation(
     present_hex_data = get_hexagram(reading["present_hexagram"])
     future_hex_data = get_hexagram(reading["future_hexagram"]) if reading.get("future_hexagram") else None
     
-    # Generar interpretación profunda
-    result = generate_deep_interpretation(
-        question=reading.get("question"),
-        present_hexagram=present_hex_data,
-        future_hexagram=future_hex_data,
-        changing_lines=reading.get("changing_lines", []),
-        has_changing_lines=reading.get("has_changing_lines", False)
-    )
+    # Generar interpretación profunda usando el servicio elegido
+    if use_custom:
+        # Usar la gema personalizada del usuario
+        result = generate_custom_interpretation(
+            question=reading.get("question"),
+            present_hexagram=present_hex_data,
+            future_hexagram=future_hex_data,
+            changing_lines=reading.get("changing_lines", []),
+            has_changing_lines=reading.get("has_changing_lines", False),
+            throws=reading.get("throws", [])
+        )
+    else:
+        # Usar Gemini estándar (fallback)
+        result = generate_deep_interpretation(
+            question=reading.get("question"),
+            present_hexagram=present_hex_data,
+            future_hexagram=future_hex_data,
+            changing_lines=reading.get("changing_lines", []),
+            has_changing_lines=reading.get("has_changing_lines", False)
+        )
     
     # Guardar la interpretación en la base de datos para caché
     await readings_collection.update_one(
         {"_id": ObjectId(reading_id)},
-        {"$set": {"deep_interpretation": result["interpretation"]}}
+        {"$set": {"deep_interpretation": result["interpretation"], "interpretation_model": "custom_gem" if use_custom else "gemini_standard"}}
     )
     
     return {
@@ -320,7 +333,9 @@ async def get_deep_interpretation(
         "future_hexagram": future_hex_data,
         "has_changing_lines": reading.get("has_changing_lines", False),
         "changing_lines": reading.get("changing_lines", []),
-        "question": reading.get("question")
+        "question": reading.get("question"),
+        "model": result.get("model", "unknown"),
+        "success": result.get("success", True)
     }
 
 @api_router.get("/hexagrams/{number}")
