@@ -18,13 +18,28 @@ import { LinearGradient } from 'expo-linear-gradient';
 const { width } = Dimensions.get('window');
 
 interface DeepInterpretation {
-  titulo: string;
-  analisis: string;
-  lineas_moviles: string | null;
-  plan_accion: string[];
-  consejo_sabio: string;
-  resultado_esperado: string | null;
-  keywords: string[];
+  // Formato de la gema personalizada
+  presente: {
+    numero: number;
+    nombre: string;
+    icono: string;
+    mensaje_principal: string;
+  };
+  transformacion: {
+    lineas_mutantes: number[];
+    consejo_mutacion: string;
+  };
+  futuro?: {
+    numero: number;
+    nombre: string;
+    mensaje: string;
+    icono: string;
+  };
+  plan_accion: Array<{
+    paso: number;
+    titulo: string;
+    detalle: string;
+  }>;
 }
 
 export default function InterpretationScreen() {
