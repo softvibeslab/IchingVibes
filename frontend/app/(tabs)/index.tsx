@@ -325,16 +325,24 @@ export default function OracleScreen() {
 
           {/* Área de monedas */}
           <View style={styles.coinArea}>
-            <Text style={styles.instructionText}>
-              {isAnimating
-                ? 'Lanzando monedas...'
-                : 'Sacude tu dispositivo o toca el botón'}
-            </Text>
+            {/* Indicador de shake */}
+            <View style={[
+              styles.shakeIndicator,
+              shakeIndicator && styles.shakeIndicatorActive,
+            ]}>
+              <Text style={styles.instructionText}>
+                {isAnimating
+                  ? '✨ Lanzando monedas...'
+                  : currentThrow >= 6
+                    ? '🎋 Hexagrama completado'
+                    : '📳 Sacude tu dispositivo o toca el botón'}
+              </Text>
+            </View>
 
             {/* Monedas */}
             {coinValues.map((value, index) => (
               <Coin
-                key={index}
+                key={`coin-${currentThrow}-${index}`}
                 value={value}
                 index={index}
                 position={getCoinPosition(index)}
@@ -348,12 +356,18 @@ export default function OracleScreen() {
             style={[
               styles.throwButton,
               (isAnimating || currentThrow >= 6) && styles.throwButtonDisabled,
+              shakeIndicator && styles.throwButtonShaking,
             ]}
             onPress={handleThrowCoins}
             disabled={isAnimating || currentThrow >= 6}
+            activeOpacity={0.7}
           >
             <Text style={styles.throwButtonText}>
-              {isAnimating ? 'Lanzando...' : 'Lanzar Monedas'}
+              {isAnimating 
+                ? '⏳ Lanzando...' 
+                : currentThrow >= 6 
+                  ? '✅ Completado' 
+                  : '🪙 Lanzar Monedas'}
             </Text>
           </TouchableOpacity>
 
