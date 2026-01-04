@@ -332,6 +332,39 @@ export default function InterpretationScreen() {
                   </View>
                 ))}
               </View>
+
+              {/* Metadatos - Tono, Elemento, Virtud */}
+              {deepInterpretation.metadatos && (
+                <View style={styles.metadatosSection}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="sparkles" size={24} color="#FFD700" />
+                    <Text style={styles.sectionTitle}>Esencia de la Lectura</Text>
+                  </View>
+                  <View style={styles.metadatosGrid}>
+                    <View style={styles.metadatoItem}>
+                      <View style={[styles.metadatoIcon, styles.tonoIcon]}>
+                        <Ionicons name="musical-notes" size={20} color="#FFF" />
+                      </View>
+                      <Text style={styles.metadatoLabel}>Tono</Text>
+                      <Text style={styles.metadatoValue}>{deepInterpretation.metadatos.tono_general}</Text>
+                    </View>
+                    <View style={styles.metadatoItem}>
+                      <View style={[styles.metadatoIcon, styles.elementoIcon]}>
+                        <Ionicons name="leaf" size={20} color="#FFF" />
+                      </View>
+                      <Text style={styles.metadatoLabel}>Elemento</Text>
+                      <Text style={styles.metadatoValue}>{deepInterpretation.metadatos.elemento_clave}</Text>
+                    </View>
+                    <View style={styles.metadatoItem}>
+                      <View style={[styles.metadatoIcon, styles.virtudIcon]}>
+                        <Ionicons name="heart" size={20} color="#FFF" />
+                      </View>
+                      <Text style={styles.metadatoLabel}>Virtud</Text>
+                      <Text style={styles.metadatoValue}>{deepInterpretation.metadatos.virtud_recomendada}</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
             </View>
           )}
 
