@@ -375,8 +375,80 @@ docker exec iching-mongodb mongosh -u iching_user -p TuPasswordSeguro123! --auth
 
 ### 8.1 Añadir servicio de aplicación
 
+#### 🖱️ Opción A: Desde la UI de Easypanel
+
 1. Click en **"+ Service"**
 2. Seleccionar **"App"**
+
+#### 💻 Opción B: Desde Terminal SSH
+
+```bash
+# Navegar al directorio del proyecto
+cd /etc/easypanel/projects/iching-oracle
+
+# Clonar el repositorio (si no lo tienes)
+git clone https://github.com/TU_USUARIO/iching-oracle.git /opt/iching-oracle
+
+# Crear Dockerfile para el backend (si no existe)
+cat > /opt/iching-oracle/backend/Dockerfile << 'EOF'
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y gcc curl && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8001
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8001/api/health || exit 1
+
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001"]
+EOF
+
+# Agregar servicio backend al docker-compose
+cat >> /etc/easypanel/projects/iching-oracle/docker-compose.yml << 'EOF'
+
+  backend:
+    build:
+      context: /opt/iching-oracle/backend
+      dockerfile: Dockerfile
+    container_name: iching-backend
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_URL=mongodb://iching_user:TuPasswordSeguro123!@mongodb:27017/iching_production?authSource=admin
+      - DB_NAME=iching_production
+      - GEMINI_USER_API_KEY=TU_API_KEY_AQUI
+      - SECRET_KEY=tu-clave-secreta-generada-con-openssl
+      - PORT=8001
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - iching-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+EOF
+
+# Generar SECRET_KEY segura
+echo "Tu SECRET_KEY generada:"
+openssl rand -hex 32
+
+# Construir y levantar el backend
+docker-compose up -d --build backend
+
+# Ver logs en tiempo real
+docker logs -f iching-backend
+```
 
 ### 8.2 Configuración básica
 
@@ -413,7 +485,7 @@ En la pestaña **"Environment"**, añadir:
 
 | Variable | Valor |
 |----------|-------|
-| `MONGO_URL` | `mongodb://iching_user:TU_PASSWORD@mongodb:27017/iching_production` |
+| `MONGO_URL` | `mongodb://iching_user:TU_PASSWORD@mongodb:27017/iching_production?authSource=admin` |
 | `DB_NAME` | `iching_production` |
 | `GEMINI_USER_API_KEY` | `AIzaSy...` (tu API key) |
 | `SECRET_KEY` | (genera con `openssl rand -hex 32`) |
@@ -442,6 +514,167 @@ En la pestaña **"Advanced"**:
 1. Click en **"Deploy"**
 2. Ver logs para verificar que inicia correctamente
 3. Estado debe ser **"Running"** ✅
+
+### ✅ 8.9 VALIDACIÓN: Verificar Backend
+
+#### Desde Terminal SSH:
+
+```bash
+# 1. Verificar que el contenedor está corriendo
+echo "1️⃣ Estado del contenedor:"
+docker ps | grep backend
+# ✅ Debe mostrar: iching-backend ... Up X minutes (healthy)
+
+# 2. Verificar logs (sin errores)
+echo "2️⃣ Últimos logs:"
+docker logs --tail 30 iching-backend
+# ✅ Debe mostrar: "Application startup complete" sin errores
+
+# 3. Health check interno
+echo "3️⃣ Health check interno:"
+docker exec iching-backend curl -s http://localhost:8001/api/health
+# ✅ Debe mostrar: {"status":"healthy","database":"healthy"...}
+
+# 4. Health check externo (si tienes dominio configurado)
+echo "4️⃣ Health check externo:"
+curl -s http://TU_IP_VPS:8001/api/health
+# ✅ Debe mostrar el mismo JSON
+
+# 5. Verificar conexión a MongoDB
+echo "5️⃣ Verificar conexión a MongoDB:"
+docker exec iching-backend python3 -c "
+from motor.motor_asyncio import AsyncIOMotorClient
+import asyncio
+import os
+
+async def test():
+    client = AsyncIOMotorClient(os.environ['MONGO_URL'])
+    await client.admin.command('ping')
+    print('✅ Conexión a MongoDB exitosa')
+    
+asyncio.run(test())
+"
+
+# 6. Probar endpoint de login
+echo "6️⃣ Probar autenticación:"
+curl -s -X POST http://TU_IP_VPS:8001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"maria@demo.com","password":"demo123"}' | head -c 100
+# ✅ Debe mostrar: {"access_token":"eyJ...
+```
+
+#### Script de validación completa:
+
+```bash
+#!/bin/bash
+# Guardar como: validate_backend.sh
+
+API="http://localhost:8001"
+echo "🔍 Validando Backend..."
+echo "========================"
+
+# Health check
+echo -n "1. Health check: "
+HEALTH=$(curl -s "$API/api/health")
+if echo "$HEALTH" | grep -q '"healthy"'; then
+    echo "✅ OK"
+    echo "   $HEALTH"
+else
+    echo "❌ FALLO"
+    echo "   $HEALTH"
+    exit 1
+fi
+
+# Database
+echo -n "2. Base de datos: "
+if echo "$HEALTH" | grep -q '"database": "healthy"'; then
+    echo "✅ Conectada"
+else
+    echo "❌ No conectada"
+    exit 1
+fi
+
+# Crear usuario de prueba
+echo -n "3. Registro de usuario: "
+TIMESTAMP=$(date +%s)
+REGISTER=$(curl -s -X POST "$API/api/auth/register" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"test_${TIMESTAMP}@test.com\",\"password\":\"test123\",\"name\":\"Test\"}")
+if echo "$REGISTER" | grep -q 'access_token'; then
+    echo "✅ OK"
+else
+    echo "⚠️ Usuario ya existe o error: $REGISTER"
+fi
+
+# Login
+echo -n "4. Login: "
+LOGIN=$(curl -s -X POST "$API/api/auth/login" \
+    -H "Content-Type: application/json" \
+    -d '{"email":"maria@demo.com","password":"demo123"}')
+TOKEN=$(echo "$LOGIN" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+if [ -n "$TOKEN" ]; then
+    echo "✅ OK (token obtenido)"
+else
+    echo "❌ FALLO"
+    echo "   Respuesta: $LOGIN"
+    exit 1
+fi
+
+# Obtener lecturas
+echo -n "5. Obtener lecturas: "
+READINGS=$(curl -s "$API/api/readings" -H "Authorization: Bearer $TOKEN")
+COUNT=$(echo "$READINGS" | grep -o '"id"' | wc -l)
+echo "✅ OK ($COUNT lecturas encontradas)"
+
+echo ""
+echo "🎉 Backend validado correctamente!"
+```
+
+#### Checklist de validación:
+
+| # | Verificación | Comando | ✅ Esperado |
+|---|--------------|---------|-------------|
+| 1 | Contenedor activo | `docker ps \| grep backend` | Status: Up (healthy) |
+| 2 | Sin errores en logs | `docker logs iching-backend` | "startup complete" |
+| 3 | Health check | `curl /api/health` | `{"status":"healthy"}` |
+| 4 | MongoDB conectado | Health check | `"database":"healthy"` |
+| 5 | Login funciona | `POST /api/auth/login` | Token JWT |
+| 6 | Variables correctas | `docker exec ... env` | Todas definidas |
+
+**⚠️ NO continúes al siguiente paso hasta que todas las validaciones pasen.**
+
+#### 🔧 Troubleshooting Backend:
+
+**Error: "Cannot connect to MongoDB"**
+```bash
+# Verificar que MongoDB está en la misma red
+docker network inspect iching-network
+
+# Verificar MONGO_URL
+docker exec iching-backend env | grep MONGO
+
+# Probar conexión manual
+docker exec iching-backend python3 -c "
+from pymongo import MongoClient
+client = MongoClient('mongodb://iching_user:PASSWORD@mongodb:27017/?authSource=admin')
+print(client.server_info())
+"
+```
+
+**Error: "Module not found"**
+```bash
+# Reconstruir imagen
+docker-compose build --no-cache backend
+docker-compose up -d backend
+```
+
+**Error: "Port already in use"**
+```bash
+# Ver qué usa el puerto
+lsof -i :8001
+# Matar proceso
+kill -9 PID
+```
 
 ---
 
