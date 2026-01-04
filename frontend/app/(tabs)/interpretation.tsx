@@ -227,6 +227,29 @@ export default function InterpretationScreen() {
                 <Text style={styles.presentTitle}>{deepInterpretation.presente.nombre}</Text>
                 <Text style={styles.presentNumber}>Hexagrama #{deepInterpretation.presente.numero}</Text>
                 <Text style={styles.presentMessage}>{deepInterpretation.presente.mensaje_principal}</Text>
+                
+                {/* Recursos Externos del Presente */}
+                {deepInterpretation.presente.recursos_externos && (
+                  <View style={styles.recursosContainer}>
+                    <Text style={styles.recursosTitle}>Profundiza tu estudio:</Text>
+                    <View style={styles.recursosLinks}>
+                      <TouchableOpacity 
+                        style={styles.recursoLink}
+                        onPress={() => Linking.openURL(deepInterpretation.presente.recursos_externos!.ora)}
+                      >
+                        <Ionicons name="book" size={16} color="#FFD700" />
+                        <Text style={styles.recursoText}>Ver en ORA (ES)</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.recursoLink}
+                        onPress={() => Linking.openURL(deepInterpretation.presente.recursos_externos!.fer)}
+                      >
+                        <Ionicons name="library" size={16} color="#FFD700" />
+                        <Text style={styles.recursoText}>Ver en FER (PT)</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
               </View>
 
               {/* Transformación */}
