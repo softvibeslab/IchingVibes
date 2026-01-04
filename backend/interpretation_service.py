@@ -7,9 +7,7 @@ import google.generativeai as genai
 from typing import Dict, Optional
 
 # Configurar Gemini
-EMERGEN
-
-T_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "sk-emergent-f149c6009F204AeE30")
+EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "sk-emergent-f149c6009F204AeE30")
 genai.configure(api_key=EMERGENT_LLM_KEY)
 
 # Usar Gemini 1.5 Flash para respuestas rápidas y de calidad
