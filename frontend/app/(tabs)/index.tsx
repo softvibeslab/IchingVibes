@@ -490,10 +490,26 @@ const styles = StyleSheet.create({
   throwButtonDisabled: {
     opacity: 0.5,
   },
+  throwButtonShaking: {
+    backgroundColor: '#FFE55C',
+    transform: [{ scale: 1.02 }],
+  },
   throwButtonText: {
     color: '#0f0e17',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  shakeIndicator: {
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.2)',
+  },
+  shakeIndicatorActive: {
+    backgroundColor: 'rgba(255, 215, 0, 0.3)',
+    borderColor: '#FFD700',
   },
   historyContainer: {
     backgroundColor: '#1a1a2e',
